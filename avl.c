@@ -139,29 +139,22 @@ int avlInsert(struct node **tree, data_t data){
 		char ret = 0;
 		if((*tree)->data == data){
 			return -1; // If data already exists
-		}
-		else if((*tree)->data > data){
+		}else if((*tree)->data > data){
 			ret = avlInsert(&((*tree)->left), data); // Recurse to add
-			if(!ret){
-				(*tree)->size++; // Increment only if data did not exist
-				updateHeight(*tree);
-
-				// Re-balance
-				rotate(tree);
-			}
-			return ret;
 		}else if((*tree)->data < data){
 			ret = avlInsert(&((*tree)->right), data);
-			if(!ret){
-				(*tree)->size++; // Increment only if data did not exist
-				updateHeight(*tree);
-
-				// Re-balance
-				rotate(tree);
-			}
-
-			return ret;
 		}
+
+		// Update node data on successful insert
+		if(!ret){
+			(*tree)->size++; // Increment only if data did not exist
+			updateHeight(*tree);
+
+			// Re-balance
+			rotate(tree);
+		}
+
+		return ret;
 	}
 
 	return -1;
