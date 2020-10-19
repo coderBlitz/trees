@@ -92,11 +92,15 @@ int checkAVL(Node *root){
 	return good;
 }
 
-int main(){
+int main(int argc, char *argv[]){
 	srand(time(0));
 
 	Node *test = NULL;
 	int N = 100000;
+	if(argc == 2){
+		N = strtol(argv[1], NULL, 10);
+	}
+
 	int mod = N*3;
 	long nums[N];
 
