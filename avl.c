@@ -1,7 +1,7 @@
 /*
 	avl.c -- AVL tree that stores a single piece of data
 
-	Copyright (C) 2019 Christopher Skane
+	Copyright (C) 2020 Christopher Skane
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -93,11 +93,10 @@ void rotate(struct node **tree){
 			// Rotate left child and left->right child
 			//printf("Left-Right rotation with 0x%X\t0x%X\t0x%X\n", *tree, (*tree)->left, (*tree)->left->right);
 			rotateLeft(&((*tree)->left), (*tree)->left->right);
-			rotateRight(tree, (*tree)->left);
-		}else{
-			// Normal rotation right
-			rotateRight(tree, (*tree)->left);
 		}
+
+		// Normal rotation right
+		rotateRight(tree, (*tree)->left);
 	}else if(diff == -2){
 		//printf("Checking double condition on right\n");
 		size_t rightChild = ((*tree)->right->right == NULL)?0:(*tree)->right->right->height;
@@ -109,15 +108,9 @@ void rotate(struct node **tree){
 			// Rotate right child and right->left child
 			//printf("Right-Left rotation with 0x%X\t0x%X\t0x%X\n", *tree, (*tree)->right, (*tree)->right->left);
 			rotateRight(&((*tree)->right), (*tree)->right->left);
-			rotateLeft(tree, (*tree)->right);
-		}else{
-			// Normal rotation left
-			rotateLeft(tree, (*tree)->right);
 		}
-	}else if(diff > 1){
-		// Normal rotation
-		rotateRight(tree, (*tree)->left);
-	}else if(diff < -1){
+
+		// Normal rotation left
 		rotateLeft(tree, (*tree)->right);
 	}
 }
@@ -227,6 +220,7 @@ data_t avlDeleteMax(struct node **tree){
 
 int avlRemove(struct node **tree, data_t data){
 	if((*tree) != NULL){
+		int ret = 0;
 		if((*tree)->data == data){
 			// If at the node to remove, get min of right or max of left for root
 			// Maybe have it choose larger side to take from
@@ -243,32 +237,21 @@ int avlRemove(struct node **tree, data_t data){
 				return 0;
 			}
 
+			ret = 0;
+		}else if((*tree)->data > data){ // Traversal conditions
+			ret = avlRemove(&((*tree)->left), data);
+		}else if((*tree)->data < data){
+			ret = avlRemove(&((*tree)->right), data);
+		}
+
+		// Only update on successful remove
+		if(!ret){
 			(*tree)->size--;
 			updateHeight(*tree);
 			rotate(tree);
-			return 0;
 		}
-		else if((*tree)->data > data){ // Traversal conditions
-			int ret = avlRemove(&((*tree)->left), data);
 
-			// Only update on successful remove
-			if(!ret){
-				(*tree)->size--;
-				updateHeight(*tree);
-				rotate(tree);
-			}
-
-			return ret;
-		}else if((*tree)->data < data){
-			int ret = avlRemove(&((*tree)->right), data);
-			if(!ret){
-				(*tree)->size--;
-				updateHeight(*tree);
-				rotate(tree);
-			}
-
-			return ret;
-		}
+		return ret;
 	}
 
 	return -1;
