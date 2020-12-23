@@ -96,16 +96,16 @@ int main(int argc, char *argv[]){
 	srand(time(0));
 
 	Node *test = NULL;
-	int N = 100000;
+	size_t N = 100000;
 	if(argc == 2){
 		N = strtol(argv[1], NULL, 10);
 	}
 
-	int mod = N*3;
-	long nums[N];
+	size_t mod = N*3;
+	long *nums = malloc(N * sizeof(*nums));
 
-	printf("Inserting %d numbers into test..\n",N);
-	for(int i = 0;i < N;i++){
+	printf("Inserting %lu numbers into test..\n", N);
+	for(long i = 0;i < N;i++){
 		nums[i] = rand() % mod;
 		//printf("Inserting %d..\n", nums[i]);
 		if(avlInsert(&test, nums[i])){
@@ -128,10 +128,10 @@ int main(int argc, char *argv[]){
 
 	//printf("\nTrying to remove root node test(%d)..\n", test->data);
 	printf("Trying to remove everything..\n");
-	for(int i = 0;i < N;i++){
+	for(long i = 0;i < N;i++){
 		//printf("Removing %d\n", nums[i]);
 		if(avlRemove(&test, nums[i])){
-			printf("Failed to remove %d\n", nums[i]);
+			printf("Failed to remove %ld\n", nums[i]);
 			break;
 		}else if(checkAVL(test)){ // Adds considerable time to removals
 			printf("Tree failed check on iteration %d, after removing %d\n", i, nums[i]);
@@ -140,6 +140,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 
+	free(nums);
 	printf("Destroying..\n");
 	destroy(&test);
 }

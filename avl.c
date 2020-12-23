@@ -18,21 +18,23 @@
 
 #include"avl.h"
 
-size_t updateHeight(struct node *root){
-	if(root == NULL) return 0;
-	size_t left = 0;
-	size_t right = 0;
-	if(root->left != NULL) left = root->left->height;
-	if(root->right != NULL) right = root->right->height;
+/**	Calculate height of given node
+	(Can return size_t, but nothing currently uses return)
+**/
+static inline void updateHeight(struct node *root){
+	//if(root == NULL) return 0; // NEVER happens, as far as I have tested (assuming user doesn't touch AVL structure)
 
-	root->height = ((left > right)?left:right) + 1;
+	size_t left = (root->left != NULL) ? left = root->left->height : 0;
+	size_t right = (root->right != NULL) ? right = root->right->height : 0;
 
-	return root->height;
+	root->height = ((left > right) ? left : right) + 1;
+
+	//return root->height;
 }
 
 void rotateLeft(struct node **parent, struct node *child){
 	//printf("Rotating left with 0x%X and 0x%X\n", *parent, child);
-	if(child == NULL) printf("Something wrong\n");
+	//if(child == NULL) printf("Something wrong\n");
 	// Child (right) replaces parent node
 	// Parent becomes left subtree of child
 	// Left subtree of child becomes right subtree of parent
@@ -53,7 +55,7 @@ void rotateLeft(struct node **parent, struct node *child){
 }
 void rotateRight(struct node **parent, struct node *child){
 	//printf("Rotating right with 0x%X and 0x%X\n", *parent, child);
-	if(child == NULL) printf("Something wrong\n");
+	//if(child == NULL) printf("Something wrong\n");
 	// Child (left) replaces parent node
 	// Parent becomes right subtree of child
 	// Right subtree of child becomes left subtree of parent
@@ -72,21 +74,30 @@ void rotateRight(struct node **parent, struct node *child){
 	*parent = child;
 	updateHeight(child);
 }
-// Rotation helper that will perform the correct rotation for the given root
-void rotate(struct node **tree){
-	if(tree == NULL || (*tree) == NULL) return;
 
-	size_t left = ((*tree)->left == NULL)?0:(*tree)->left->height;
-	size_t right = ((*tree)->right == NULL)?0:(*tree)->right->height;
-	int32_t diff = left-right;
+/**	Rotation helper that will perform the correct rotation for the given root.
+	Returns a non-zero value when a rotation occured
+**/
+int rotate(struct node **tree){
+	if(tree == NULL || (*tree) == NULL) return 1;
 
-	if(diff == 2){
+	size_t left = ((*tree)->left == NULL) ? 0 : (*tree)->left->height;
+	size_t right = ((*tree)->right == NULL) ? 0 : (*tree)->right->height;
+	int64_t diff = left-right;
+	size_t rightChild;
+	size_t leftChild;
+	int64_t childDiff;
+	int ret = 0;
+
+	//if(diff == 2){
+	switch(diff){
+		case 2:
 		// Check for double rotation condition
 		// The end root will be the subtree of the child with larger height
 		//printf("Checking double condition on left\n");
-		size_t rightChild = ((*tree)->left->right == NULL)?0:(*tree)->left->right->height;
-		size_t leftChild = ((*tree)->left->left == NULL)?0:(*tree)->left->left->height;
-		int32_t childDiff = rightChild - leftChild;
+		rightChild = ((*tree)->left->right == NULL) ? 0 : (*tree)->left->right->height;
+		leftChild = ((*tree)->left->left == NULL) ? 0 : (*tree)->left->left->height;
+		childDiff = rightChild - leftChild;
 
 		if(childDiff > 0){
 			// Rotate left-right
@@ -97,11 +108,15 @@ void rotate(struct node **tree){
 
 		// Normal rotation right
 		rotateRight(tree, (*tree)->left);
-	}else if(diff == -2){
+
+		ret = 1; // Rotation occured
+	break;
+	//}else if(diff == -2){
+		case -2:
 		//printf("Checking double condition on right\n");
-		size_t rightChild = ((*tree)->right->right == NULL)?0:(*tree)->right->right->height;
-		size_t leftChild = ((*tree)->right->left == NULL)?0:(*tree)->right->left->height;
-		int32_t childDiff = leftChild - rightChild;
+		rightChild = ((*tree)->right->right == NULL) ? 0 : (*tree)->right->right->height;
+		leftChild = ((*tree)->right->left == NULL) ? 0 : (*tree)->right->left->height;
+		childDiff = leftChild - rightChild;
 
 		if(childDiff > 0){
 			// Rotate right-left
@@ -112,12 +127,24 @@ void rotate(struct node **tree){
 
 		// Normal rotation left
 		rotateLeft(tree, (*tree)->right);
+
+		ret = 1; // Rotation occured
+	break;
 	}
+
+	return ret;
 }
 
 
-// Inserts data into tree, performs rotations and updates heights
+/**	Inserts data into tree, performs rotations and updates heights
+**/
 int avlInsert(struct node **tree, data_t data){
+	int ret = -1;
+	if(tree == NULL) return ret;
+
+#ifndef INSERT_ITER
+	/* Typical recursive variant
+	*/
 	if(*tree == NULL){
 		//printf("Inserting %d\n", data);
 		(*tree) = malloc(sizeof(Node));// Once at end of branch, insert leaf
@@ -127,11 +154,10 @@ int avlInsert(struct node **tree, data_t data){
 		(*tree)->left = NULL;
 		(*tree)->right = NULL;
 
-		return 0;
+		ret = 0;
 	}else{
-		char ret = 0;
 		if((*tree)->data == data){
-			return -1; // If data already exists
+			ret = -1; // If data already exists
 		}else if((*tree)->data > data){
 			ret = avlInsert(&((*tree)->left), data); // Recurse to add
 		}else if((*tree)->data < data){
@@ -146,11 +172,51 @@ int avlInsert(struct node **tree, data_t data){
 			// Re-balance
 			rotate(tree);
 		}
+	}
+#else
+	/* Iterative variant
+	*/
+	ret = 0;
+	struct node **root = tree; // Traversal pointer
+	struct node **path[64]; // Binary tree max height 64 for 64-bit (probably only need 63)
+	int cnt = 0;
 
-		return ret;
+	while(*root != NULL && cnt < 64){
+		path[cnt++] = root; // Add to path
+
+		if((*root)->data > data){
+			root = &(*root)->left;
+		}else if((*root)->data < data){
+			root = &(*root)->right;
+		}else{
+			return -1; // Duplicate value, so return early
+		}
 	}
 
-	return -1;
+	// Insert the node
+	(*root) = malloc(sizeof(Node));
+	(*root)->data = data;
+	(*root)->size = 1;
+	(*root)->height = 1;
+	(*root)->left = NULL;
+	(*root)->right = NULL;
+
+	// Reverse path to update height and rotate
+	while(--cnt >= 0){
+		(*path[cnt])->size++;
+		updateHeight(*path[cnt]);
+
+		if(rotate(path[cnt])) break;
+	}
+
+	// Update remaining heights and sizes
+	while(--cnt >= 0){
+		(*path[cnt])->size++;
+		updateHeight(*path[cnt]);
+	}
+#endif
+
+	return ret;
 }
 
 data_t avlDeleteMin(struct node **tree){
@@ -274,7 +340,7 @@ int avlFind(struct node *tree, data_t data, data_t **value){
 
 size_t size(const struct node *tree){
 	if(tree != NULL){
-		int count = size(tree->left);
+		size_t count = size(tree->left);
 		count++; // This node
 		count += size(tree->right);
 
@@ -320,8 +386,8 @@ void printTree(struct node *tree){
 	if(tree != NULL){
 		printTree(tree->left);
 		printf("0x%016lX: %5ld\tL: %8X\tR: %8X\t", tree, tree->data, tree->left, tree->right);
-		printf("%d/%d\t", (tree->left == NULL)?0:tree->left->size, (tree->right == NULL)?0:tree->right->size);
-		printf("%d/%d\n", (tree->left == NULL)?0:tree->left->height, (tree->right == NULL)?0:tree->right->height);
+		printf("%d/%d\t", (tree->left == NULL) ? 0 : tree->left->size, (tree->right == NULL) ? 0 : tree->right->size);
+		printf("%d/%d\n", (tree->left == NULL) ? 0 : tree->left->height, (tree->right == NULL) ? 0 : tree->right->height);
 		printTree(tree->right);
 	}
 }
